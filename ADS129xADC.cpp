@@ -25,37 +25,51 @@ SoftSPI<ADS_SOFT_SPI_MISO_PIN, ADS_SOFT_SPI_MOSI_PIN, ADS_SOFT_SPI_SCK_PIN, SPI_
 #endif
 
 // Initialise ADC interface
-void ADS129xADC::initInt(const uint8_t& chipSelectPin = ADS_CS_PIN)
+void ADS129xADC::init(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
+                      const uint8_t& resetPin = ADS_RESET_PIN, \
+                      const uint8_t& startPin = ADS_START_PIN, \
+                      const uint8_t& clkSelPin = ADS_CLKSEL_PIN, \
+                      const uint8_t& dRdyPin = ADS_DRDY_PIN, \
+                      const uint8_t& chipSelectPin = ADS_CS_PIN)
 {
+    m_pwdnPin = pwdnPin;
+    m_resetPin = resetPin;
+    m_startPin = startPin;
+    m_clkSelPin = clkSelPin;
+    m_dRdyPin = dRdyPin;
     m_chipSelectPin = chipSelectPin;
-    pinMode(ADS_PWDN_PIN, OUTPUT);
-    pinMode(ADS_RESET_PIN, OUTPUT);
-    pinMode(ADS_START_PIN, OUTPUT);
-    pinMode(ADS_DRDY_PIN, INPUT);
-    pinMode(ADS_CLKSEL_PIN, OUTPUT);
+    
+    pinMode(m_pwdnPin, OUTPUT);
+    pinMode(m_resetPin, OUTPUT);
+    pinMode(m_startPin, OUTPUT);
+    pinMode(m_clkSelPin, OUTPUT);
+    pinMode(m_dRdyPin, INPUT);
     pinMode(m_chipSelectPin, OUTPUT);
-    SPI.begin();
 }
 
 // Power down the ADC
 void ADS129xADC::pwrDown()
 {
-    digitalWriteFast(ADS_PWDN_PIN, LOW);
+    digitalWriteFast(m_pwdnPin, LOW);
 }
 
 // Power up ADC and disable read data continuous mode
 void ADS129xADC::pwrUp(const bool& init)
 {
-    digitalWriteFast(ADS_PWDN_PIN, LOW);
-    digitalWriteFast(ADS_START_PIN, LOW);
-    digitalWriteFast(ADS_CLKSEL_PIN, HIGH);
-    digitalWriteFast(ADS_PWDN_PIN, HIGH);
-    digitalWriteFast(ADS_RESET_PIN, HIGH);
-    if (init) {delay(200);}                // No need to wait for VCAP1 to charge if we are powering up after sleep
-    digitalWriteFast(ADS_RESET_PIN, LOW);
+    digitalWriteFast(m_pwdnPin, LOW);
+    digitalWriteFast(m_startPin, LOW);
+    digitalWriteFast(m_clkSelPin, HIGH);
+    digitalWriteFast(m_pwdnPin, HIGH);
+    digitalWriteFast(m_resetPin, HIGH);
+    
+    if (init)
+        delay(200);                // No need to wait for VCAP1 to charge if we are powering up after sleep
+    
+    digitalWriteFast(m_resetPin, LOW);
     delayMicroseconds(1);
-    digitalWriteFast(ADS_RESET_PIN, HIGH);
+    digitalWriteFast(m_resetPin, HIGH);
     delayMicroseconds(9);
+    SPI.begin();
     sendCmd(SDATAC);
 }
 
@@ -171,7 +185,7 @@ void ADS129xADC::setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8
 // Start continuous data acquisition
 void ADS129xADC::startC()
 {
-    digitalWriteFast(ADS_START_PIN, HIGH);
+    digitalWriteFast(m_startPin, HIGH);
     sendCmd(RDATAC);
 }
 

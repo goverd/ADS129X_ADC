@@ -55,12 +55,19 @@ private:
     void chipSelectLow();
     void chipSelectHigh();
     // Private data
+    uint8_t m_pwdnPin;
+    uint8_t m_resetPin;
+    uint8_t m_startPin;
+    uint8_t m_clkSelPin;
+    uint8_t m_dRdyPin;
     uint8_t m_chipSelectPin;
 public:
     // Construct an instance of ADS129xADC
     ADS129xADC() {}
     // Initialise ADC interface
-    void initInt(const uint8_t& chipSelectPin);
+    void init(const uint8_t& pwdnPin, const uint8_t& resetPin, \
+              const uint8_t& startPin, const uint8_t& clkSelPin, \
+              const uint8_t& dRdyPin, const uint8_t& chipSelectPin);
     // Power down the ADCs
     void pwrDown();
     // Power up the ADC
