@@ -168,6 +168,13 @@ void ADS129xADC::setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8
     }
 }
 
+// Start continuous data acquisition
+void ADS129xADC::startC()
+{
+    digitalWriteFast(ADS_START_PIN, HIGH);
+    sendCmd(RDATAC);
+}
+
 // If required reconfigure SPI interface for ADC and pull ADC CS pin LOW
 void ADS129xADC::chipSelectLow()
 {

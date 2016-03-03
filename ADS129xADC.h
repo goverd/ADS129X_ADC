@@ -73,6 +73,8 @@ public:
     uint8_t getID();
     // Setup signal acquisition at high resolution and 1 KS/s rate
     void setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, const bool& rld, const bool& intTest, const bool& resp);
+    // Start continuous data acquisition
+    void startC();
     // Send single byte command to the ADC
     void sendCmd(const uint8_t& cmd);
     // Write single ADC register
