@@ -24,13 +24,10 @@
 SoftSPI<ADS_SOFT_SPI_MISO_PIN, ADS_SOFT_SPI_MOSI_PIN, ADS_SOFT_SPI_SCK_PIN, SPI_MODE> SPI;
 #endif
 
-// Initialise ADC interface
-void ADS129xADC::init(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
-                      const uint8_t& resetPin = ADS_RESET_PIN, \
-                      const uint8_t& startPin = ADS_START_PIN, \
-                      const uint8_t& clkSelPin = ADS_CLKSEL_PIN, \
-                      const uint8_t& dRdyPin = ADS_DRDY_PIN, \
-                      const uint8_t& chipSelectPin = ADS_CS_PIN)
+// Bring interface pin numbers into private vars
+ADS129xADC::ADS129xADC (const uint8_t& pwdnPin, const uint8_t& resetPin, \
+                        const uint8_t& startPin, const uint8_t& clkSelPin, \
+                        const uint8_t& dRdyPin, const uint8_t& chipSelectPin)
 {
     m_pwdnPin = pwdnPin;
     m_resetPin = resetPin;
@@ -38,13 +35,19 @@ void ADS129xADC::init(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
     m_clkSelPin = clkSelPin;
     m_dRdyPin = dRdyPin;
     m_chipSelectPin = chipSelectPin;
-    
+}
+
+// Initialise ADC interface pins
+void ADS129xADC::init()
+{
     pinMode(m_pwdnPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
     pinMode(m_startPin, OUTPUT);
     pinMode(m_clkSelPin, OUTPUT);
     pinMode(m_dRdyPin, INPUT);
     pinMode(m_chipSelectPin, OUTPUT);
+    
+    SPI.begin();
 }
 
 // Power down the ADC
@@ -63,13 +66,12 @@ void ADS129xADC::pwrUp(const bool& init)
     digitalWriteFast(m_resetPin, HIGH);
     
     if (init)
-        delay(200);                // No need to wait for VCAP1 to charge if we are powering up after sleep
+        delay(200);     // No need to wait for VCAP1 to charge if we are powering up after sleep
     
     digitalWriteFast(m_resetPin, LOW);
     delayMicroseconds(1);
     digitalWriteFast(m_resetPin, HIGH);
     delayMicroseconds(9);
-    SPI.begin();
     sendCmd(SDATAC);
 }
 
@@ -114,7 +116,9 @@ uint8_t ADS129xADC::getID()
 }
 
 // Setup signal acquisition
-void ADS129xADC::setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, const bool& rld, const bool& intTest, const bool& resp)
+void ADS129xADC::setup(const uint8_t& numChs, const uint8_t& maxChs, \
+                       const uint8_t& res_speed, const bool& rld, \
+                       const bool& intTest, const bool& resp)
 {
     uint8_t RLD_bits = 0;
     // All GPIO set to output (floating CMOS inputs can flicker, creating noise)

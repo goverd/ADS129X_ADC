@@ -62,12 +62,15 @@ private:
     uint8_t m_dRdyPin;
     uint8_t m_chipSelectPin;
 public:
-    // Construct an instance of ADS129xADC
-    ADS129xADC() {}
-    // Initialise ADC interface
-    void init(const uint8_t& pwdnPin, const uint8_t& resetPin, \
-              const uint8_t& startPin, const uint8_t& clkSelPin, \
-              const uint8_t& dRdyPin, const uint8_t& chipSelectPin);
+    // Bring interface pin numbers into private vars at construction
+    ADS129xADC(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
+               const uint8_t& resetPin = ADS_RESET_PIN, \
+               const uint8_t& startPin = ADS_START_PIN, \
+               const uint8_t& clkSelPin = ADS_CLKSEL_PIN, \
+               const uint8_t& dRdyPin = ADS_DRDY_PIN, \
+               const uint8_t& chipSelectPin = ADS_CS_PIN);
+    // Initialise ADC interface pins
+    void init();
     // Power down the ADCs
     void pwrDown();
     // Power up the ADC
@@ -79,7 +82,8 @@ public:
     // Get ADC ID
     uint8_t getID();
     // Setup signal acquisition at high resolution and 1 KS/s rate
-    void setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, const bool& rld, const bool& intTest, const bool& resp);
+    void setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, \
+               const bool& rld, const bool& intTest, const bool& resp);
     // Start continuous data acquisition
     void startC();
     // Send single byte command to the ADC
