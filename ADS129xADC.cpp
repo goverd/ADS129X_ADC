@@ -241,7 +241,7 @@ uint8_t ADS129xADC::readRegister(const uint8_t& reg)
     return reg_val;
 }
 
-// Fetch samples writing data directly to the buffer
+// Fetch samples writing data to the buffer supplied
 void ADS129xADC::fetchData(uint8_t* chData, const uint8_t& numChs, const bool& gpio)
 {
     chipSelectLow();
