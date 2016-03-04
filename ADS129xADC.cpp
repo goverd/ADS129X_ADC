@@ -89,30 +89,28 @@ void ADS129xADC::wakeup()
 }
 
 // Get ADC ID
-uint8_t ADS129xADC::getID()
+void ADS129xADC::getID()
 {
-    switch (readRegister(ID)) {
-        case ID_ADS1294:
-            return ID_ADS1294;
+    m_adcID = readRegister(ID);
+    
+    switch (m_adcID & B00000111) { //3 least significant bits reports channels
+        case B000:
+            numChAv = 4; //ads1294
             break;
-        case ID_ADS1296:
-            return ID_ADS1296;
+        case B001:
+            numChAv = 6; //ads1296
             break;
-        case ID_ADS1298:
-            return ID_ADS1298;
+        case B010:
+            numChAv = 8; //ads1298
             break;
-        case ID_ADS1294R:
-            return ID_ADS1294R;
-            break;
-        case ID_ADS1296R:
-            return ID_ADS1296R;
-            break;
-        case ID_ADS1298R:
-            return ID_ADS1298R;
+        case B110:
+            numChAv = 8; //ads1299
             break;
         default:
-            return 0;
+            numChAv = 0; //indicates ADC comms error
     }
+    
+    respEN = ((m_adcID >> 5) && B110)? true : false;
 }
 
 // Setup signal acquisition
@@ -263,3 +261,17 @@ void ADS129xADC::fetchData(uint8_t* chData, const uint8_t& numChs, const bool& g
     }
     chipSelectHigh();
 }
+
+// Startup the ADC, initialize interface and setup ID information
+void ADS129xADC::begin()
+{
+    // Initialize ADC interface pins
+    init();
+    
+    // Power up the ADC
+    pwrUp(true);
+    
+    // Get ADC information
+    getID();
+}
+

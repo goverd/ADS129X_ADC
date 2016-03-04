@@ -48,6 +48,15 @@ uint8_t const ADS_CLKSEL_PIN   = 6;
 uint8_t const ADS_DRDY_PIN     = 7;
 uint8_t const ADS_CS_PIN       = 10;
 
+// Define channel types
+enum chType
+{
+    NC = 0,     // Nothing connected
+    PHY,        // Physiological input (EEG, ECG, EMG, etc.) used for RLD
+    SEN,        // External sensor (Breathing belt, MM sensor, etc.) not used for RLD
+    RES         // Use impedance pneumography with R series device (valid type for channel 1 only!) not used for RLD
+};
+
 class ADS129xADC
 {
 private:
@@ -61,7 +70,11 @@ private:
     uint8_t m_clkSelPin;
     uint8_t m_dRdyPin;
     uint8_t m_chipSelectPin;
+    
+    int m_adcID;
 public:
+    int numChAv;
+    bool respEN;
     // Bring interface pin numbers into private vars at construction
     ADS129xADC(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
                const uint8_t& resetPin = ADS_RESET_PIN, \
@@ -75,12 +88,14 @@ public:
     void pwrDown();
     // Power up the ADC
     void pwrUp(const bool& init);
+    // Startup ADC
+    void begin(void);
     // Put ADC into standby mode
     void standby();
     // Wake ADC from standby mode
     void wakeup();
     // Get ADC ID
-    uint8_t getID();
+    void getID();
     // Setup signal acquisition at high resolution and 1 KS/s rate
     void setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, \
                const bool& rld, const bool& intTest, const bool& resp);
