@@ -20,8 +20,6 @@
 #ifndef ADS129xADC_h
 #define ADS129xADC_h
 
-#define USE_SOFT_SPI 1
-
 /** Nop for timing. */
 #ifndef nop
 #define nop __asm__ __volatile__ ("nop\n\t")
@@ -29,24 +27,29 @@
 
 #include "Arduino.h"
 
+#define USE_SOFT_SPI    1
+#define MAX_CH_NUM      8
+#define BYTES_P_CH      3
+
+// Select bit-bang (Soft) SPI
 #if USE_SOFT_SPI
 #include "SoftSPI.h"
-uint8_t const ADS_SOFT_SPI_MISO_PIN = 16;
-uint8_t const ADS_SOFT_SPI_MOSI_PIN = 15;
-uint8_t const ADS_SOFT_SPI_SCK_PIN  = 14;
-uint8_t const SPI_MODE = 1;
+#define ADS_SOFT_SPI_MISO_PIN   16
+#define ADS_SOFT_SPI_MOSI_PIN   15
+#define ADS_SOFT_SPI_SCK_PIN    14
+#define SPI_MODE                1
 extern SoftSPI<ADS_SOFT_SPI_MISO_PIN, ADS_SOFT_SPI_MOSI_PIN, ADS_SOFT_SPI_SCK_PIN, SPI_MODE> SPI;
 #else
 #include "SPI.h"
-#endif
+#endif  // USE_SOFT_SPI
 
 /** Define ADC control pins */
-uint8_t const ADS_PWDN_PIN     = 2;
-uint8_t const ADS_RESET_PIN    = 3;
-uint8_t const ADS_START_PIN    = 4;
-uint8_t const ADS_CLKSEL_PIN   = 6;
-uint8_t const ADS_DRDY_PIN     = 7;
-uint8_t const ADS_CS_PIN       = 10;
+#define ADS_PWDN_PIN     2
+#define ADS_RESET_PIN    3
+#define ADS_START_PIN    4
+#define ADS_CLKSEL_PIN   6
+#define ADS_DRDY_PIN     7
+#define ADS_CS_PIN       10
 
 // Define channel types
 enum chType
@@ -64,50 +67,55 @@ private:
     void chipSelectLow();
     void chipSelectHigh();
     // Private data
-    uint8_t m_pwdnPin;
-    uint8_t m_resetPin;
-    uint8_t m_startPin;
-    uint8_t m_clkSelPin;
-    uint8_t m_dRdyPin;
-    uint8_t m_chipSelectPin;
-    
-    int m_adcID;
-public:
-    int numChAv;
-    bool respEN;
-    // Bring interface pin numbers into private vars at construction
-    ADS129xADC(const uint8_t& pwdnPin = ADS_PWDN_PIN, \
-               const uint8_t& resetPin = ADS_RESET_PIN, \
-               const uint8_t& startPin = ADS_START_PIN, \
-               const uint8_t& clkSelPin = ADS_CLKSEL_PIN, \
-               const uint8_t& dRdyPin = ADS_DRDY_PIN, \
-               const uint8_t& chipSelectPin = ADS_CS_PIN);
+    int m_pwdnPin;
+    int m_resetPin;
+    int m_startPin;
+    int m_clkSelPin;
+    int m_dRdyPin;
+    int m_chipSelectPin;
+    // ADC params
+    int m_adcID     = 0;
+    bool m_getGPIO  = false;
+    bool m_respEN   = false;
+    chType m_chSpec[MAX_CH_NUM];
     // Initialise ADC interface pins
-    void init();
+    void initPins();
+    void setRecInfo(const chType chSpec[]);
+public:
+    int numChAv     = 0;
+    int numChCon    = 0;
+    int recSize     = 0;
+    // Bring interface pin numbers into private vars at construction
+    ADS129xADC(const int& pwdnPin = ADS_PWDN_PIN, \
+               const int& resetPin = ADS_RESET_PIN, \
+               const int& startPin = ADS_START_PIN, \
+               const int& clkSelPin = ADS_CLKSEL_PIN, \
+               const int& dRdyPin = ADS_DRDY_PIN, \
+               const int& chipSelectPin = ADS_CS_PIN);
     // Power down the ADCs
     void pwrDown();
     // Power up the ADC
-    void pwrUp(const bool& init);
-    // Startup ADC
-    void begin(void);
+    void pwrUp(const bool& first);
     // Put ADC into standby mode
     void standby();
     // Wake ADC from standby mode
     void wakeup();
     // Get ADC ID
     void getID();
-    // Setup signal acquisition at high resolution and 1 KS/s rate
-    void setup(const uint8_t& numChs, const uint8_t& maxChs, const uint8_t& res_speed, \
-               const bool& rld, const bool& intTest, const bool& resp);
     // Start continuous data acquisition
-    void startC();
-    // Send single byte command to the ADC
+    void streamC(const chType chSpec[], const int& res_speed, \
+                 const bool& intTest, const bool& useGPIO = false);
+    void setAqParams(const chType chSpec[], const int& res_speed, \
+                     const bool& intTest, const bool& useGPIO);
+    // Initialize ADC pins, power it up and test comms by fetching and saving ID
+    void startUp();
+    // Start continuous data stream
     void sendCmd(const uint8_t& cmd);
     // Write single ADC register
     void writeRegister(const uint8_t& reg, const uint8_t& arg);
     // Read single ADC register
     uint8_t readRegister(const uint8_t& reg);
     // Fetch data from ADC, specify number of channels to fetch and if GPIO data is required
-    void fetchData(uint8_t* chData, const uint8_t& numChs, const bool& gpio);
+    void fetchData(uint8_t* chData);
 };
 #endif /* ADS129xADC_h */

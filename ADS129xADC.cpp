@@ -25,9 +25,9 @@ SoftSPI<ADS_SOFT_SPI_MISO_PIN, ADS_SOFT_SPI_MOSI_PIN, ADS_SOFT_SPI_SCK_PIN, SPI_
 #endif
 
 // Bring interface pin numbers into private vars
-ADS129xADC::ADS129xADC (const uint8_t& pwdnPin, const uint8_t& resetPin, \
-                        const uint8_t& startPin, const uint8_t& clkSelPin, \
-                        const uint8_t& dRdyPin, const uint8_t& chipSelectPin)
+ADS129xADC::ADS129xADC (const int& pwdnPin, const int& resetPin, \
+                        const int& startPin, const int& clkSelPin, \
+                        const int& dRdyPin, const int& chipSelectPin)
 {
     m_pwdnPin = pwdnPin;
     m_resetPin = resetPin;
@@ -38,7 +38,7 @@ ADS129xADC::ADS129xADC (const uint8_t& pwdnPin, const uint8_t& resetPin, \
 }
 
 // Initialise ADC interface pins
-void ADS129xADC::init()
+void ADS129xADC::initPins()
 {
     pinMode(m_pwdnPin, OUTPUT);
     pinMode(m_resetPin, OUTPUT);
@@ -57,7 +57,7 @@ void ADS129xADC::pwrDown()
 }
 
 // Power up ADC and disable read data continuous mode
-void ADS129xADC::pwrUp(const bool& init)
+void ADS129xADC::pwrUp(const bool& first)
 {
     digitalWriteFast(m_pwdnPin, LOW);
     digitalWriteFast(m_startPin, LOW);
@@ -65,7 +65,7 @@ void ADS129xADC::pwrUp(const bool& init)
     digitalWriteFast(m_pwdnPin, HIGH);
     digitalWriteFast(m_resetPin, HIGH);
     
-    if (init)
+    if (first)
         delay(200);     // No need to wait for VCAP1 to charge if we are powering up after sleep
     
     digitalWriteFast(m_resetPin, LOW);
@@ -110,85 +110,20 @@ void ADS129xADC::getID()
             numChAv = 0; //indicates ADC comms error
     }
     
-    respEN = ((m_adcID >> 5) && B110)? true : false;
+    m_respEN = ((m_adcID >> 5) && B110)? true : false;
 }
 
-// Setup signal acquisition
-void ADS129xADC::setup(const uint8_t& numChs, const uint8_t& maxChs, \
-                       const uint8_t& res_speed, const bool& rld, \
-                       const bool& intTest, const bool& resp)
+// Startup the ADC, initialize interface and setup ID information
+void ADS129xADC::startUp()
 {
-    uint8_t RLD_bits = 0;
-    // All GPIO set to output (floating CMOS inputs can flicker, creating noise)
-    writeRegister(GPIO, 0x00);
+    // Initialize ADC interface pins
+    initPins();
     
-    // Set ADC to work at high resolution 1 KS/s sampling rate
-    writeRegister(CONFIG1, res_speed);
+    // Power up the ADC
+    pwrUp(true);
     
-    if (intTest) {
-        // Generate AC internal test signal
-        writeRegister(CONFIG2, CONFIG2_const | INT_TEST_2HZ | TEST_AMP);
-        
-        // Setup channels required to acquire test signal
-        for (uint8_t iii = 0; iii < numChs; ++iii) {
-            writeRegister(CH1SET + iii, CHnSET_const | TEST_SIGNAL | GAIN_X12); //create square wave
-        }
-        
-        // Power down channels that are not required
-        for (uint8_t iii = numChs; iii < maxChs; ++iii) {
-            writeRegister(CH1SET + iii, PD_CH | SHORTED);
-        }
-    }
-    else {
-        // Generate DC internal test signal
-        writeRegister(CONFIG2, CONFIG2_const);
-        
-        if (resp) {
-            writeRegister(RESP, RESP_DEMOD_EN1 | RESP_MOD_EN1 | RESP_PH_135 | RESP_const | RESP_INT_SIG_INT);
-            writeRegister(CONFIG4, CONFIG4_const | RESP_FREQ_32k_Hz);
-            
-            // Setup channel 1 for respiration acquisition
-            writeRegister(CH1SET, CHnSET_const | ELECTRODE_INPUT | GAIN_X4);
-            
-            // Setup channels other channels
-            for (uint8_t iii = 1; iii < numChs; ++iii) {
-                writeRegister(CH1SET + iii, CHnSET_const | ELECTRODE_INPUT | GAIN_X12);
-                RLD_bits |= (1 << iii);
-            }
-        }
-        else {
-            // Setup channels
-            for (uint8_t iii = 0; iii < numChs; ++iii) {
-                writeRegister(CH1SET + iii, CHnSET_const | ELECTRODE_INPUT | GAIN_X12);
-                RLD_bits |= (1 << iii);
-            }
-        }
-        
-        // Power down channels that are not required
-        for (uint8_t iii = numChs; iii < maxChs; ++iii) {
-            writeRegister(CH1SET + iii, PD_CH | SHORTED);
-        }
-    }
-    
-    if (rld) {
-        // FOR RLD: Power up the internal reference
-        writeRegister(CONFIG3, RLDREF_INT | PD_RLD | PD_REFBUF | CONFIG3_const);
-        // Only use channels IN2P and IN2N for the RLD Measurement
-        writeRegister(RLD_SENSP, 0x02);
-        writeRegister(RLD_SENSN, 0x02);
-//            writeRegister(RLD_SENSP, RLD_bits);
-//            writeRegister(RLD_SENSN, RLD_bits);
-    }
-    else {
-        writeRegister(CONFIG3, PD_REFBUF | CONFIG3_const);
-    }
-}
-
-// Start continuous data acquisition
-void ADS129xADC::startC()
-{
-    digitalWriteFast(m_startPin, HIGH);
-    sendCmd(RDATAC);
+    // Get ADC information
+    getID();
 }
 
 // If required reconfigure SPI interface for ADC and pull ADC CS pin LOW
@@ -239,39 +174,121 @@ uint8_t ADS129xADC::readRegister(const uint8_t& reg)
     return reg_val;
 }
 
-// Fetch samples writing data to the buffer supplied
-void ADS129xADC::fetchData(uint8_t* chData, const uint8_t& numChs, const bool& gpio)
+// Set # of channels connected and recSize
+void ADS129xADC::setRecInfo(const chType chSpec[])
 {
-    chipSelectLow();
-    if (gpio) {
-        // Fetch sample data
-        for (uint8_t iii = 0; iii < (numChs + gpio) * 3; iii++) {
-            chData[iii]     = SPI.transfer(0);
+    for (int i = 0; i < numChAv; i++) {
+        (chSpec[i] == NC)? numChCon : numChCon++;
+        m_chSpec[i] = chSpec[i];
+    }
+    
+    recSize = (numChCon + m_getGPIO)  * BYTES_P_CH;
+}
+
+// Setup signal acquisition
+void ADS129xADC::streamC(const chType chSpec[], const int& res_speed, \
+                         const bool& intTest, const bool& useGPIO)
+{
+    setAqParams(chSpec, res_speed, intTest, useGPIO);
+    digitalWriteFast(m_startPin, HIGH);
+    sendCmd(RDATAC);
+}
+
+// Setup signal acquisition
+void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed, \
+                         const bool& intTest, const bool& useGPIO)
+{
+    uint8_t RLD_bits2set = 0x00;
+    
+    m_getGPIO = useGPIO;
+    setRecInfo(chSpec);
+    
+    // All GPIO set to output (floating CMOS inputs can flicker, creating noise)
+    writeRegister(GPIO, 0x00);
+    
+    // Set ADC to work at high resolution 1 KS/s sampling rate
+    writeRegister(CONFIG1, res_speed);
+    
+    if (intTest) {
+        // Generate AC internal test signal
+        writeRegister(CONFIG2, CONFIG2_const | INT_TEST_2HZ | TEST_AMP);
+        
+        // Setup all available channel to acquire test signal
+        for (int i = 0; i < numChAv; i++) {
+            writeRegister(CH1SET + i, CHnSET_const | TEST_SIGNAL | GAIN_X12);
         }
     }
     else {
-        // Skip GPIO data
+        // Generate DC internal test signal
+        writeRegister(CONFIG2, CONFIG2_const);
+        
+        // Setup all available channel to acquire test signal
+        for (int i = 0; i < numChAv; i++) {
+            switch (m_chSpec[i]) {
+                case RES:
+                    writeRegister(RESP, RESP_DEMOD_EN1 | RESP_MOD_EN1 | RESP_PH_135 | RESP_const | RESP_INT_SIG_INT);
+                    writeRegister(CONFIG4, CONFIG4_const | RESP_FREQ_32k_Hz);
+                    writeRegister(CH1SET, CHnSET_const | ELECTRODE_INPUT | GAIN_X4);
+                    break;
+                case SEN:
+                    writeRegister(CH1SET + i, CHnSET_const | ELECTRODE_INPUT | GAIN_X12);
+                    break;
+                case PHY:
+                    writeRegister(CH1SET + i, CHnSET_const | ELECTRODE_INPUT | GAIN_X12);
+                    RLD_bits2set |= (1<<i);
+                    break;
+                default:
+                    writeRegister(CH1SET + i, PD_CH | SHORTED);
+                    break;
+            }
+        }
+        
+        if (RLD_bits2set) {
+            writeRegister(CONFIG3, RLDREF_INT | PD_RLD | PD_REFBUF | CONFIG3_const);
+            writeRegister(RLD_SENSP, RLD_bits2set);
+            writeRegister(RLD_SENSN, RLD_bits2set);
+        }
+        else {
+            writeRegister(CONFIG3, PD_REFBUF | CONFIG3_const);
+        }
+    }
+}
+
+
+// Fetch samples writing data to the buffer supplied
+void ADS129xADC::fetchData(uint8_t* chData)
+{
+    int dataIdx = 0;
+    
+    chipSelectLow();
+    
+    if (m_getGPIO) {
+        chData[dataIdx++] = SPI.transfer(0);
+        chData[dataIdx++] = SPI.transfer(0);
+        chData[dataIdx++] = SPI.transfer(0);
+    }
+    else {
         SPI.transfer(0);
         SPI.transfer(0);
         SPI.transfer(0);
-        // Fetch sample data
-        for (uint8_t iii = 0; iii < numChs * 3; iii++) {
-            chData[iii] = SPI.transfer(0);
+    }
+    
+    for (int i = 0; i < numChAv; i++) {
+        switch (m_chSpec[i]) {
+            case RES:
+            case SEN:
+            case PHY:
+                chData[dataIdx++] = SPI.transfer(0);
+                chData[dataIdx++] = SPI.transfer(0);
+                chData[dataIdx++] = SPI.transfer(0);
+                break;
+            default:
+                SPI.transfer(0);
+                SPI.transfer(0);
+                SPI.transfer(0);
+                break;
         }
     }
     chipSelectHigh();
-}
-
-// Startup the ADC, initialize interface and setup ID information
-void ADS129xADC::begin()
-{
-    // Initialize ADC interface pins
-    init();
-    
-    // Power up the ADC
-    pwrUp(true);
-    
-    // Get ADC information
-    getID();
 }
 
