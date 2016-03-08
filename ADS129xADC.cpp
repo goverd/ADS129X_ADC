@@ -195,8 +195,8 @@ void ADS129xADC::streamC(const chType chSpec[], const int& res_speed, \
 }
 
 // Setup signal acquisition
-void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed, \
-                         const bool& intTest, const bool& useGPIO)
+void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed,
+                             const bool& intTest, const bool& useGPIO)
 {
     uint8_t RLD_bits2set = 0x00;
     
