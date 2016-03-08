@@ -66,7 +66,7 @@ private:
     // Private functions
     void chipSelectLow();
     void chipSelectHigh();
-    // Private data
+    // ADC interface pins
     int m_pwdnPin;
     int m_resetPin;
     int m_startPin;
@@ -103,9 +103,9 @@ public:
     // Get ADC ID
     void getID();
     // Start continuous data acquisition
-    void streamC(const chType chSpec[], const int& res_speed, \
+    void streamC(const chType chSpec[], const uint8_t& res_speed, \
                  const bool& intTest, const bool& useGPIO = false);
-    void setAqParams(const chType chSpec[], const int& res_speed, \
+    void setAqParams(const chType chSpec[], const uint8_t& res_speed, \
                      const bool& intTest, const bool& useGPIO);
     // Initialize ADC pins, power it up and test comms by fetching and saving ID
     void startUp();

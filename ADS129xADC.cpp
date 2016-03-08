@@ -186,7 +186,7 @@ void ADS129xADC::setRecInfo(const chType chSpec[])
 }
 
 // Setup signal acquisition
-void ADS129xADC::streamC(const chType chSpec[], const int& res_speed, \
+void ADS129xADC::streamC(const chType chSpec[], const uint8_t& res_speed, \
                          const bool& intTest, const bool& useGPIO)
 {
     setAqParams(chSpec, res_speed, intTest, useGPIO);
@@ -195,7 +195,7 @@ void ADS129xADC::streamC(const chType chSpec[], const int& res_speed, \
 }
 
 // Setup signal acquisition
-void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed,
+void ADS129xADC::setAqParams(const chType chSpec[], const uint8_t& res_speed,
                              const bool& intTest, const bool& useGPIO)
 {
     uint8_t RLD_bits2set = 0x00;
@@ -210,17 +210,16 @@ void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed,
     writeRegister(CONFIG1, res_speed);
     
     if (intTest) {
-        // Generate AC internal test signal
-        writeRegister(CONFIG2, CONFIG2_const | INT_TEST_2HZ | TEST_AMP);
+        // Generate AC internal test signal at smallest amplitude, but highest freq.
+        writeRegister(CONFIG2, CONFIG2_const | INT_TEST_2HZ);
         
         // Setup all available channel to acquire test signal
-        for (int i = 0; i < numChAv; i++) {
+        for (int i = 0; i < numChAv; i++)
             writeRegister(CH1SET + i, CHnSET_const | TEST_SIGNAL | GAIN_X12);
-        }
     }
     else {
         // Generate DC internal test signal
-        writeRegister(CONFIG2, CONFIG2_const);
+        writeRegister(CONFIG2, CONFIG2_const | INT_TEST_DC);
         
         // Setup all available channel to acquire test signal
         for (int i = 0; i < numChAv; i++) {
@@ -242,15 +241,15 @@ void ADS129xADC::setAqParams(const chType chSpec[], const int& res_speed,
                     break;
             }
         }
-        
-        if (RLD_bits2set) {
-            writeRegister(CONFIG3, RLDREF_INT | PD_RLD | PD_REFBUF | CONFIG3_const);
-            writeRegister(RLD_SENSP, RLD_bits2set);
-            writeRegister(RLD_SENSN, RLD_bits2set);
-        }
-        else {
-            writeRegister(CONFIG3, PD_REFBUF | CONFIG3_const);
-        }
+    }
+    
+    if (RLD_bits2set) {
+        writeRegister(CONFIG3, RLDREF_INT | PD_RLD | PD_REFBUF | CONFIG3_const);
+        writeRegister(RLD_SENSP, RLD_bits2set);
+        writeRegister(RLD_SENSN, RLD_bits2set);
+    }
+    else {
+        writeRegister(CONFIG3, PD_REFBUF | CONFIG3_const);
     }
 }
 
