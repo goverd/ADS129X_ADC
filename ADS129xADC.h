@@ -102,11 +102,13 @@ public:
     void wakeup();
     // Get ADC ID
     void getID();
-    // Start continuous data acquisition
-    void streamC(const chType chSpec[], const uint8_t& res_speed, \
-                 const bool& intTest, const bool& useGPIO = false);
+    // Start ADC conversion and read data continuous mode
+    void startStream(void);
+    // Stop ADC conversion and read data continuous mode
+    void stopStream(void);
+    // Setup signal acquisition
     void setAqParams(const chType chSpec[], const uint8_t& res_speed, \
-                     const bool& intTest, const bool& useGPIO);
+                     const bool& intTest, const bool& useGPIO = false);
     // Initialize ADC pins, power it up and test comms by fetching and saving ID
     void startUp();
     // Start continuous data stream

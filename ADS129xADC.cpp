@@ -185,13 +185,18 @@ void ADS129xADC::setRecInfo(const chType chSpec[])
     recSize = (numChCon + m_getGPIO)  * BYTES_P_CH;
 }
 
-// Setup signal acquisition
-void ADS129xADC::streamC(const chType chSpec[], const uint8_t& res_speed, \
-                         const bool& intTest, const bool& useGPIO)
+// Start ADC conversion and read data continuous mode
+void ADS129xADC::startStream()
 {
-    setAqParams(chSpec, res_speed, intTest, useGPIO);
     digitalWriteFast(m_startPin, HIGH);
     sendCmd(RDATAC);
+}
+
+// Stop ADC conversion and read data continuous mode
+void ADS129xADC::stopStream()
+{
+    digitalWriteFast(m_startPin, LOW);
+    sendCmd(SDATAC);
 }
 
 // Setup signal acquisition
