@@ -107,10 +107,9 @@ public:
     // Stop ADC conversion and read data continuous mode
     void stopStream(void);
     // Setup signal acquisition
-    void setAqParams(const chType chSpec[], const uint8_t& res_speed, \
-                     const bool& intTest, const bool& useGPIO = false);
+    void setAqParams(const uint8_t& res_speed, const bool& intTest, const bool& useGPIO = false);
     // Initialize ADC pins, power it up and test comms by fetching and saving ID
-    void startUp();
+    void startUp(const chType chSpec[]);
     // Start continuous data stream
     void sendCmd(const uint8_t& cmd);
     // Write single ADC register

@@ -114,7 +114,7 @@ void ADS129xADC::getID()
 }
 
 // Startup the ADC, initialize interface and setup ID information
-void ADS129xADC::startUp()
+void ADS129xADC::startUp(const chType chSpec[])
 {
     // Initialize ADC interface pins
     initPins();
@@ -124,6 +124,8 @@ void ADS129xADC::startUp()
     
     // Get ADC information
     getID();
+    
+    setRecInfo(chSpec);
 }
 
 // If required reconfigure SPI interface for ADC and pull ADC CS pin LOW
@@ -200,13 +202,11 @@ void ADS129xADC::stopStream()
 }
 
 // Setup signal acquisition
-void ADS129xADC::setAqParams(const chType chSpec[], const uint8_t& res_speed,
-                             const bool& intTest, const bool& useGPIO)
+void ADS129xADC::setAqParams(const uint8_t& res_speed, const bool& intTest, const bool& useGPIO)
 {
     uint8_t RLD_bits2set = 0x00;
     
     m_getGPIO = useGPIO;
-    setRecInfo(chSpec);
     
     // All GPIO set to output (floating CMOS inputs can flicker, creating noise)
     writeRegister(GPIO, 0x00);

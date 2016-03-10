@@ -34,8 +34,8 @@
 uint8_t const WAKEUP            = 0x02;
 uint8_t const STANDBY           = 0x04;
 uint8_t const RESET             = 0x06;
-uint8_t const START             = 0x08;
-uint8_t const STOP              = 0x0A;
+uint8_t const STARTCON          = 0x08;
+uint8_t const STOPCON           = 0x0A;
 /** Read data commands */
 uint8_t const RDATAC            = 0x10;
 uint8_t const SDATAC            = 0x11;
