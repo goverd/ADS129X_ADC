@@ -27,7 +27,7 @@
 
 #include "Arduino.h"
 
-#define USE_SOFT_SPI    0
+#define USE_SOFT_SPI    1
 #define MAX_CH_NUM      8
 #define BYTES_P_CH      3
 
